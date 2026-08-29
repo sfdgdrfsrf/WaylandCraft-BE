@@ -47,7 +47,10 @@ struct Mod::State {
 };
 
 Mod& Mod::instance() {
-    static Mod inst{ll::mod::NativeMod::current()};
+    // 26.20: NativeMod::current() returns shared_ptr<NativeMod>; the pointer
+    // is owned by the mod manager for the module's lifetime, so binding a
+    // reference here stays valid for as long as this mod is loaded.
+    static Mod inst{*ll::mod::NativeMod::current()};
     return inst;
 }
 

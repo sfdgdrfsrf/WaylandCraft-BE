@@ -19,6 +19,11 @@
 
 #include "util/Log.h"
 
+// Platform guard: Android only (bionic, pm/am, intent socket). Desktop Linux
+// uses LinuxBridge; Windows/macOS get the no-op stubs in src/stubs/. Matches
+// the factory gate in PlatformBridge.cpp exactly.
+#if defined(WLC_ANDROID) && defined(__ANDROID__)
+
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -91,31 +96,7 @@ bool skipPackage(const std::string& pkg) {
     return false;
 }
 
-int scoreQuery(const std::string& text, const std::string& q) {
-    if (text == q) return 3;
-    if (text.rfind(q, 0) == 0) return 2;
-    if (text.find(q) != std::string::npos) return 1;
-    return 0;
-}
-
 } // namespace
-
-int scoreEntry(const DesktopEntry& entry, const std::string& query) {
-    if (query.empty()) return 1;
-    std::string q = query;
-    std::transform(q.begin(), q.end(), q.begin(), ::tolower);
-    auto lower = [](std::string s) {
-        std::transform(s.begin(), s.end(), s.begin(), ::tolower);
-        return s;
-    };
-    int score = 0;
-    score += scoreQuery(lower(entry.name), q) * 3;
-    score += scoreQuery(lower(entry.genericName), q);
-    score += scoreQuery(lower(entry.comment), q);
-    score += scoreQuery(lower(entry.appId), q) * 2;
-    for (const auto& k : entry.keywords) score += scoreQuery(lower(k), q) * 2;
-    return score;
-}
 
 // ---------------------------------------------------------------------------
 class AndroidBridge : public PlatformBridge {
@@ -222,3 +203,5 @@ std::unique_ptr<PlatformBridge> makePlatformBridgeForAndroid() {
     return std::make_unique<AndroidBridge>();
 }
 } // namespace wlc
+
+#endif // defined(WLC_ANDROID) && defined(__ANDROID__)

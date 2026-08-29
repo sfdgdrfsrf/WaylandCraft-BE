@@ -68,6 +68,27 @@ Frame pump choreography (identical to upstream):
   `wl_data_offer.receive` fd splice — Minecraft never touches the bytes
   (exactly upstream's design).
 
+## Windows build layer (upstream parity)
+
+Windows lanes (server + client) compile the whole glue layer but swap the
+POSIX-only subsystems for no-op stubs in `src/stubs/windows/WaylandStubs.cpp`:
+
+| Excluded on Windows | Why |
+| --- | --- |
+| `compositor/*.cpp` | Unix sockets + SCM_RIGHTS fd passing (`sys/un.h`, `sendmsg`) |
+| `util/MemFd.cpp` | `memfd_create` / `shm_open` |
+| `util/XkbKeymap.cpp` | memfd + POSIX file IO for the keymap fd |
+| `android/CaptureService.cpp` | BSD sockets (`arpa/inet.h`) |
+| `platform/LinuxBridge.cpp` / `AndroidBridge.cpp` | `dirent.h`, `fork/exec`, `popen` (also platform-guarded in-file) |
+
+This is the deliberate upstream model — *"you can install it on MacOS and
+Windows but you won't have any of the features"*: config, commands, HUD
+chrome, window items and the scriptevent sync channel all load; the
+compositor reports "socket failed" and `NullBridge` reports unavailable
+features. The stub file implements **every non-inline method declared** in
+the replaced headers; Windows CI's linker is the drift detector (a declared-
+but-unstubbed method = unresolved external there).
+
 ## Open items (the honest list)
 
 1. **Tier A texture upload** (`render/TextureBridge.cpp`) — one per-version

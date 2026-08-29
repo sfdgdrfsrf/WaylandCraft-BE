@@ -44,6 +44,29 @@ target("WaylandCraftBE")
     add_includedirs("src")
     add_files("src/**.cpp")
 
+    -- Platform file selection -------------------------------------------------
+    -- The compositor core (Unix sockets + SCM_RIGHTS), the shm memfd
+    -- allocator, the XDG/Android bridges and the capture service are
+    -- POSIX-only. Windows builds link the no-op stubs in src/stubs/windows/
+    -- instead — upstream parity: "features on Linux only".
+    if is_plat("windows", "mingw") then
+        remove_files(
+            "src/compositor/Client.cpp",
+            "src/compositor/DataDevice.cpp",
+            "src/compositor/Globals.cpp",
+            "src/compositor/Seat.cpp",
+            "src/compositor/Server.cpp",
+            "src/compositor/Surface.cpp",
+            "src/compositor/XdgShell.cpp",
+            "src/android/CaptureService.cpp",
+            "src/util/MemFd.cpp",
+            "src/util/XkbKeymap.cpp",
+            "src/platform/LinuxBridge.cpp",
+            "src/platform/AndroidBridge.cpp")
+    else
+        remove_files("src/stubs/windows/**.cpp")
+    end
+
     -- Android client builds get the AndroidBridge / CaptureService + intent socket;
     -- Linux desktop builds get the real XDG / Wayland-satellite-style bridge.
     if is_config("android", true) then
@@ -63,8 +86,10 @@ target("WaylandCraftBE")
 -- ---------------------------------------------------------------------------
 -- Standalone compositor-core test: a REAL Wayland client handshakes with our
 -- server over the socket (registry → bind → shm → xdg-shell → frame callbacks).
--- Pure POSIX, no LeviLamina headers — runs in CI on Linux.
+-- Pure POSIX, no LeviLamina headers — POSIX platforms only (there is no
+-- compositor on Windows; the stub layer replaces it there).
 -- ---------------------------------------------------------------------------
+if not is_plat("windows", "mingw") then
 target("wlc-smoke-test")
     set_kind("binary")
     set_default(false)
@@ -74,13 +99,10 @@ target("wlc-smoke-test")
     add_files("tests/smoke_client.cpp")
     add_files("src/compositor/*.cpp")
     add_files("src/util/Log.cpp", "src/util/MemFd.cpp", "src/util/XkbKeymap.cpp")
-    if is_plat("linux", "android", "macosx", "bsd") then
-        add_syslinks("pthread")
-    elseif is_plat("windows") then
-        add_syslinks("ws2_32")
-    end
+    add_syslinks("pthread")
     on_run(function (target)
         import("core.base.os")
         os.execv(target:targetfile())
     end)
+end
 

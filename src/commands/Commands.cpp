@@ -14,6 +14,7 @@
 
 #include "Mod.h"
 #include "config/Config.h"
+#include "core/WindowRegistry.h"
 #include "platform/PlatformBridge.h"
 #include "util/Log.h"
 

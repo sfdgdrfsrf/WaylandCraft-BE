@@ -50,12 +50,20 @@ bool WindowItem::give(Player& player, const WindowHandle& handle, bool missingOn
         return false;
     }
 
-    // 26.20 CompoundTag: no put* setters — assign through the variant API.
-    CompoundTag nbt;
-    nbt["owner"]  = handle.ownerUuid;
-    nbt["handle"] = static_cast<int64_t>(handle.handle);
-    // 26.20 ItemStack: userdata rides the ctor (no setUserdata setter).
-    ItemStack item{kItemId, 1, 0, &nbt};
+    // SNBT construction on purpose: CompoundTagVariant::operator= would pull
+    // the recursive std::_Variant_storage_ destructor chain into this TU, and
+    // those symbols are absent from the prelink import set (BDS ships an
+    // older STL shape). CompoundTag::fromSnbt is LL-exported, so none of the
+    // variant internals are instantiated here.
+    std::string snbt = strf(R"({owner:"%s",handle:%lluL})",
+                            handle.ownerUuid.c_str(),
+                            static_cast<unsigned long long>(handle.handle));
+    auto parsed = CompoundTag::fromSnbt(snbt);
+    if (!parsed) {
+        Log::warn("window item NBT failed to parse (internal error)");
+        return false;
+    }
+    ItemStack item{kItemId, 1, 0, &*parsed};
     player.add(item);
     Log::info(strf("gave window item %s to %s", handle.tooltipId().c_str(), key.c_str()));
     return true;

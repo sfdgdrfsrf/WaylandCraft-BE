@@ -17,7 +17,11 @@ class PlatformBridge;
 
 class Mod {
 public:
-    explicit Mod(ll::mod::NativeMod& self) : self_(self) {}
+    // Out-of-line on purpose: an inline ctor/dtor here would instantiate
+    // std::unique_ptr<State>'s deleter while State is still incomplete
+    // (MSVC static_asserts on sizeof(State)).
+    explicit Mod(ll::mod::NativeMod& self);
+    ~Mod();
 
     static Mod& instance();
 

@@ -46,6 +46,9 @@ struct Mod::State {
 #endif
 };
 
+Mod::Mod(ll::mod::NativeMod& self) : self_(self) {}
+Mod::~Mod() = default;
+
 Mod& Mod::instance() {
     // 26.20: NativeMod::current() returns shared_ptr<NativeMod>; the pointer
     // is owned by the mod manager for the module's lifetime, so binding a

@@ -1,0 +1,27 @@
+# Build artifacts
+bin/
+build/
+.vs/
+.vscode/
+.idea/
+*.user
+*.dll
+*.so
+*.lib
+*.exp
+*.pdb
+*.modpack/
+out/
+
+# xmake
+.xmake/
+*.xmake
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Compositor runtime droppings
+*.lock
+waylandcraft-*.sock

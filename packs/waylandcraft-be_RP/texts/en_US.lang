@@ -1,0 +1,6 @@
+item.wlcbe:window.name=Window
+item.wlcbe:window.name.unknown=Unknown Window
+wlcbe.tooltip.handle=Handle %s
+wlcbe.tooltip.owner=Owner %s
+wlcbe.help.title=WaylandCraft-BE — Wayland compositor in Bedrock
+wlcbe.help.keys=V App Launcher / B Window Manager / G Capture Keyboard / ALT+Q Hard Capture

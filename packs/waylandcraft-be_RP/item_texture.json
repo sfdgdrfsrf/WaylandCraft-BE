@@ -1,0 +1,12 @@
+{
+    "resource_pack_name": "waylandcraft-be",
+    "texture_name": "atlas.items",
+    "texture_data": {
+        "wlcbe_window": {
+            "textures": "textures/items/window"
+        },
+        "wlcbe_window_broken": {
+            "textures": "textures/items/window_broken"
+        }
+    }
+}

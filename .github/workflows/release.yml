@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+
+      - name: Build server + client (release)
+        shell: pwsh
+        run: |
+          xmake f -y -a x64 -m release --target_type=server
+          xmake -y
+          Compress-Archive -Path bin/* -Destination WaylandCraftBE-server-windows-x64.zip
+          xmake clean -a
+          xmake f -y -a x64 -m release --target_type=client
+          xmake -y
+          Compress-Archive -Path bin/* -Destination WaylandCraftBE-client-windows-x64.zip
+
+      - name: Extract release notes
+        shell: pwsh
+        run: |
+          $content = Get-Content CHANGELOG.md -Raw
+          $pattern = '(?s)## ' + '${{ github.ref_name }}' + '(.*?)## '
+          if ($content -match $pattern) {
+            "RELEASE_NOTES<<EOF" | Out-File -Append -FilePath $env:GITHUB_ENV
+            ($Matches[1].Trim() + "`nEOF") | Out-File -Append -FilePath $env:GITHUB_ENV
+          } else {
+            "RELEASE_NOTES=WaylandCraft-BE ${{ github.ref_name }}`nSee CHANGELOG.md" | Out-File -Append -FilePath $env:GITHUB_ENV
+          }
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ env.RELEASE_NOTES }}
+          files: |
+            WaylandCraftBE-server-windows-x64.zip
+            WaylandCraftBE-client-windows-x64.zip

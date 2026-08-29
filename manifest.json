@@ -1,0 +1,21 @@
+{
+    "name": "${modName}",
+    "entry": "${modFile}",
+    "version": "${modVersion}",
+    "type": "native-mod",
+    "platform": "${modPlatform}",
+    "author": "WaylandCraft-BE Contributors",
+    "description": "A full Wayland compositor living inside Minecraft Bedrock. Launch apps, open windows in your world, drag & drop data between them, pin a video player to your HUD. Linux desktop and Android (LeviLaunchroid) ports of EVV1E's WaylandCraft.",
+    "extraInfo": {
+        "originalMod": "WaylandCraft v2.0.3 by EVV1E (Fabric, GPL-3.0)",
+        "upstreamLicense": "GPL-3.0",
+        "platforms": {
+            "linux": "Full compositor: real Wayland apps connect over $WAYLAND_DISPLAY socket",
+            "android": "Android bridge: Intent app launcher, capture service frames, Termux wayland apps via TCP bridge"
+        },
+        "clientSupport": "Client-side rendering & input require a LeviLamina client build (LeviLauncher on Windows, LeviLaunchroid on Android)"
+    },
+    "dependencies": [],
+    "optionalDependencies": [],
+    "conflicts": []
+}

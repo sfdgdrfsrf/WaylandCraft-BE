@@ -1,0 +1,23 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "WaylandCraft-BE (Behavior)",
+        "description": "Window item for the in-game Wayland compositor. Port of EVV1E's WaylandCraft (GPL-3.0).",
+        "uuid": "e6f4a1c0-3b8d-4a97-9f1e-7c2d5b8a4e01",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 21, 0]
+    },
+    "modules": [
+        {
+            "type": "data",
+            "uuid": "e6f4a1c0-3b8d-4a97-9f1e-7c2d5b8a4e02",
+            "version": [1, 0, 0]
+        }
+    ],
+    "dependencies": [
+        {
+            "uuid": "f7a5b2d1-4c9e-4b08-802f-8d3e6c9b5f12",
+            "version": [1, 0, 0]
+        }
+    ]
+}

@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Server + client targets, Windows + Linux.
+        # (LeviLamina official support matrix; see docs/PORT_NOTES.md for
+        # why the Android arm64 client is a separate experimental workflow.)
+        os: [windows-latest, ubuntu-latest]
+        target_type: [server, client]
+        exclude:
+          # Linux client binaries require LeviLauncher-Android packaging;
+          # kept out of required CI until LeviLaunchroid CI integration.
+          - os: ubuntu-latest
+            target_type: client
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.target_type }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+          actions-cache-folder: .xmake-cache
+          package-cache: true
+          package-cache-key: wlc-${{ matrix.os }}-${{ matrix.target_type }}-v1
+          projectpath: ${{ github.workspace }}
+
+      - name: Configure
+        run: |
+          xmake f -y -a ${{ startsWith(matrix.os, 'windows') && 'x64' || 'x86_64' }} -m release --target_type=${{ matrix.target_type }}
+
+      - name: Build
+        run: xmake -y
+
+      # The Wayland smoke test proves the custom compositor speaks the real
+      # wire protocol (registry/bind/shm/xdg-shell/frame callbacks).
+      - name: Wayland protocol smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          g++ -std=c++20 -Isrc -o /tmp/smoke tests/smoke_client.cpp \
+              src/compositor/*.cpp src/util/Log.cpp src/util/MemFd.cpp \
+              src/util/XkbKeymap.cpp -lpthread
+          timeout 60 /tmp/smoke
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WaylandCraftBE-${{ matrix.os }}-${{ matrix.target_type }}
+          path: bin/*
+          if-no-files-found: error

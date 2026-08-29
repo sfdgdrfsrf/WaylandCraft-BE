@@ -1,0 +1,17 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "WaylandCraft-BE (Resources)",
+        "description": "Textures for the window item. Port of EVV1E's WaylandCraft (GPL-3.0).",
+        "uuid": "f7a5b2d1-4c9e-4b08-802f-8d3e6c9b5f12",
+        "version": [1, 0, 0],
+        "min_engine_version": [1, 21, 0]
+    },
+    "modules": [
+        {
+            "type": "resources",
+            "uuid": "f7a5b2d1-4c9e-4b08-802f-8d3e6c9b5f13",
+            "version": [1, 0, 0]
+        }
+    ]
+}

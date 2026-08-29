@@ -14,6 +14,7 @@
 
 #include "Mod.h"
 #include "config/Config.h"
+#include "platform/PlatformBridge.h"
 #include "util/Log.h"
 
 #include "ll/api/command/CommandHandle.h"
@@ -32,11 +33,18 @@ bool gRegistered = false;
 bool Commands::registerAll() {
     if (gRegistered) return true;
 
-    auto cmd = ll::command::CommandRegistrar::getInstance()
-                   .getOrCreateCommand("wlc", "WaylandCraft-BE compositor");
+    // 26.20: registrar instances are per-side; each target only touches its
+    // own. getOrCreateCommand returns CommandHandle& (not a pointer).
+#if defined(WLC_CLIENT) && !defined(WLC_SERVER)
+    auto& cmd = ll::command::CommandRegistrar::getClientInstance().getOrCreateCommand(
+        "wlc", "WaylandCraft-BE compositor");
+#else
+    auto& cmd = ll::command::CommandRegistrar::getServerInstance().getOrCreateCommand(
+        "wlc", "WaylandCraft-BE compositor");
+#endif
 
     // /wlc list
-    cmd->overload().text("list").execute([](CommandOrigin const&, CommandOutput& output) {
+    cmd.overload().text("list").execute([](CommandOrigin const&, CommandOutput& output) {
         auto& bridge = Mod::bridge();
         if (!bridge.featuresAvailable()) {
             output.error(bridge.statusLine());
@@ -57,7 +65,7 @@ bool Commands::registerAll() {
     struct LaunchParams {
         std::string appId;
     };
-    cmd->overload<LaunchParams>()
+    cmd.overload<LaunchParams>()
         .text("launch")
         .required("appId")
         .execute([](CommandOrigin const&, CommandOutput& output, LaunchParams const& p) {
@@ -80,7 +88,7 @@ bool Commands::registerAll() {
         });
 
     // /wlc pin — HUD video pin (upstream WM screen "Pin")
-    cmd->overload().text("pin").execute([](CommandOrigin const&, CommandOutput& output) {
+    cmd.overload().text("pin").execute([](CommandOrigin const&, CommandOutput& output) {
         auto& reg = Mod::registry();
         WindowDisplay* d = reg.mostRecentFocused();
         if (!d) {
@@ -91,7 +99,7 @@ bool Commands::registerAll() {
         output.success(strf("Pinned '%s' to the HUD.", d->title.c_str()));
     });
 
-    cmd->overload().text("unpin").execute([](CommandOrigin const&, CommandOutput& output) {
+    cmd.overload().text("unpin").execute([](CommandOrigin const&, CommandOutput& output) {
         Mod::registry().pin(nullptr);
         output.success("HUD pin cleared.");
     });

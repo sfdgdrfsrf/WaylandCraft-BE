@@ -2,16 +2,23 @@
 //  WaylandCraft-BE — render/ClientHooks.cpp (client target)
 //
 //  Keybinds — port of upstream's three Fabric keybindings:
-//    App Launcher   V  (waylandcraft.key.appLauncher)
-//    Window Manager B  (waylandcraft.key.windowManager)
-//    Capture Keyboard G (waylandcraft.key.captureKeyboard) — soft capture;
-//    hard capture stays ALT+Q exactly like upstream.
+//    App Launcher   V
+//    Window Manager B
+//    Capture Keyboard G (soft capture)
+//    Hard capture: upstream used ALT+Q; Bedrock's KeyInputEvent carries no
+//    modifier state, so hard capture is G-while-soft-captured instead (G is
+//    the capture key either way, so nothing is lost to the app).
 //
 //  Mouse/keyboard forwarding: Bedrock's client KeyInputEvent/MouseInputEvent
-//  (client event headers) route into the compositor seat — the crosshair is
-//  the Wayland cursor (upstream design preserved).
+//  (src-client event headers, 26.20) route into the compositor seat — the
+//  crosshair is the Wayland cursor (upstream design preserved).
+//
+//  CLIENT-ONLY TU: guarded out on server targets (input event headers ship
+//  with src-client only).
 // ============================================================================
 #include "render/ClientHooks.h"
+
+#if defined(WLC_CLIENT) && !defined(WLC_SERVER)
 
 #include "Mod.h"
 #include "compositor/Server.h"
@@ -34,55 +41,65 @@ namespace wlc {
 
 namespace {
 
-std::atomic<bool> gKeyboardCapture{false};      // soft capture (G key)
-std::atomic<bool> gHardCapture{false};          // ALT+Q (upstream HARD_CAPTURE)
+// Key codes: desktop clients report VK codes (== ASCII uppercase for
+// letters); AKEYCODE equivalents differ (V=50, B=31, G=35, ESC=111) and are
+// re-anchored when the LeviLaunchroid client lane is validated.
+constexpr int32_t kKeyAppLauncher  = 'V'; // VK_V      (AKEYCODE_V)
+constexpr int32_t kKeyWindowMgr    = 'B'; // VK_B      (AKEYCODE_B)
+constexpr int32_t kKeyCapture      = 'G'; // VK_G      (AKEYCODE_G)
+constexpr int32_t kKeyExitCapture  = 27;  // VK_ESCAPE (AKEYCODE_ESCAPE)
+
+std::atomic<bool> gKeyboardCapture{false};      // soft capture (G)
+std::atomic<bool> gHardCapture{false};          // G while soft-captured
 ll::event::ListenerPtr gKeyListener;
 ll::event::ListenerPtr gMouseListener;
 
-bool handleKey(int32_t androidKey, bool pressed, int32_t modifiers) {
+bool handleKey(int32_t key, bool pressed) {
     auto& reg = Mod::registry();
 
-    // --- UI toggles (only when NOT captured; mirrors upstream keybinds) ---
-    if (!gKeyboardCapture.load()) {
-        if (pressed) {
-            // V = App Launcher, B = Window Manager
-            if (androidKey == 47) { // V (AKEYCODE_V)
+    if (pressed) {
+        if (key == kKeyExitCapture) {
+            // ESC backs out one capture level (hard -> soft -> none).
+            if (gHardCapture.load()) gHardCapture.store(false);
+            else gKeyboardCapture.store(false);
+            return true;
+        }
+        if (key == kKeyCapture) {
+            if (!gKeyboardCapture.load()) {
+                gKeyboardCapture.store(true); // enter soft capture
+                return true;
+            }
+            if (!gHardCapture.load()) {
+                gHardCapture.store(true); // escalate to hard capture
+                return true;
+            }
+            return false; // fully captured: G forwards to the app
+        }
+        if (!gKeyboardCapture.load()) {
+            if (key == kKeyAppLauncher) {
                 AppLauncher::toggle();
                 return true;
             }
-            if (androidKey == 48) { // B (AKEYCODE_B)
+            if (key == kKeyWindowMgr) {
                 WindowManagerUI::toggle();
                 return true;
             }
-            if (androidKey == 34) { // G (AKEYCODE_G)
-                gKeyboardCapture.store(true);
-                return true;
-            }
-            if (androidKey == 16 && (modifiers & 0x02)) { // Q with ALT
-                gHardCapture.store(true);
-                return true;
-            }
+            return false;
         }
-        return false;
     }
 
     // --- capture modes -------------------------------------------------------
-    if (gHardCapture.load() && androidKey == 16 && (modifiers & 0x02) && !pressed) {
-        gHardCapture.store(false); // ALT+Q exits hard capture
-        return true;
-    }
-    if (gKeyboardCapture.load() && !gHardCapture.load() && androidKey == 111 && pressed) {
-        gKeyboardCapture.store(false); // ESC exits soft capture
+    if (gHardCapture.load() && key == kKeyExitCapture && !pressed) {
+        gHardCapture.store(false); // (release edge; state already handled above)
         return true;
     }
 
     // Forward to the focused window via the seat (evdev scancodes).
-    uint32_t evdev = androidKeyToEvdev(androidKey);
+    uint32_t evdev = androidKeyToEvdev(key);
     if (evdev != 0) {
         Compositor::keyboardKey(evdev, pressed);
     }
-    (void)reg;
-    return true; // consumed
+    return true; // consumed while captured
 }
 
 } // namespace
@@ -94,7 +111,7 @@ bool installClientHooks() {
 
     gKeyListener = bus.emplaceListener<ll::event::KeyInputEvent>(
         [](ll::event::KeyInputEvent& ev) {
-            if (handleKey(ev.key(), ev.action() != 0, ev.modifiers())) {
+            if (handleKey(ev.keyCode(), ev.isDown())) {
                 ev.cancel(); // game never sees forwarded keys (upstream behavior)
             }
         });
@@ -102,17 +119,21 @@ bool installClientHooks() {
     gMouseListener = bus.emplaceListener<ll::event::MouseInputEvent>(
         [](ll::event::MouseInputEvent& ev) {
             auto& reg = Mod::registry();
-            // Left-click press begins an implicit grab with the seat serial —
-            // the same choreography upstream's PointerGrabMap.startImplicit.
-            if (ev.button() >= 0 && ev.action() != 0) {
+            // 26.20 mouse surface: actionButtonId = button id (0 = none),
+            // buttonData = press state. Left-click press begins an implicit
+            // grab with the seat serial — the same choreography as upstream's
+            // PointerGrabMap.startImplicit.
+            const int  button  = static_cast<int>(ev.actionButtonId());
+            const bool pressed = ev.buttonData() != 0;
+            if (button > 0 && pressed) {
                 uint32_t serial =
-                    Compositor::pointerButton(mouseButtonToEvdev(ev.button()), true);
+                    Compositor::pointerButton(mouseButtonToEvdev(button), true);
                 if (auto* d = reg.mostRecentFocused()) {
-                    reg.grabMap().startImplicit(d->root, mouseButtonToEvdev(ev.button()),
+                    reg.grabMap().startImplicit(d->root, mouseButtonToEvdev(button),
                                                 serial, Vec3{}, 0, 0);
                 }
-            } else if (ev.button() >= 0) {
-                Compositor::pointerButton(mouseButtonToEvdev(ev.button()), false);
+            } else if (button > 0) {
+                Compositor::pointerButton(mouseButtonToEvdev(button), false);
             }
         });
 
@@ -129,3 +150,5 @@ void removeClientHooks() {
 }
 
 } // namespace wlc
+
+#endif // WLC_CLIENT && !WLC_SERVER

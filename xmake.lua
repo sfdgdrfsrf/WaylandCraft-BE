@@ -15,9 +15,18 @@ local target_type = is_config("target_type", "client") and "client" or "server"
 add_requires("levilamina 26.20", { configs = { target_type = target_type } })
 add_requires("levibuildscript")
 
+-- Windows lanes use clang-cl exactly like LeviLamina itself (official
+-- mod-template pattern): /EHa exception model, NOMINMAX/UNICODE hygiene.
 if is_plat("windows") then
-    add_cxxflags("/EHsc", "/utf-8", { tools = "clang_cl" })
-    add_cxxflags("/Zc:__cplusplus", { tools = "clang_cl" })
+    set_toolchains("clang-cl")
+    add_defines("NOMINMAX", "UNICODE")
+    set_exceptions("none")
+    add_cxxflags("/EHa", "/utf-8", "/Zc:__cplusplus")
+end
+
+-- Official template default so mod CRT allocations match LeviLamina's.
+if not has_config("vs_runtime") then
+    set_runtimes("MD")
 end
 
 option("target_type")
@@ -42,6 +51,7 @@ target("WaylandCraftBE")
     set_values("mod.version", "1.0.0")
 
     add_includedirs("src")
+    add_headerfiles("src/**.h")
     add_files("src/**.cpp")
 
     -- Platform file selection -------------------------------------------------

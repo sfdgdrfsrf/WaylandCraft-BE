@@ -10,9 +10,10 @@
 #include "net/Sync.h"
 #include "util/Log.h"
 
+#include "ll/api/coro/CoroTask.h"               // ll::coro::keepThis / CoroTask
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/player/PlayerJoinEvent.h"
-#include "ll/api/scheduler/Scheduler.h"
+#include "ll/api/thread/ServerThreadExecutor.h" // replaced ll/api/scheduler in 26.20
 
 #include <chrono>
 

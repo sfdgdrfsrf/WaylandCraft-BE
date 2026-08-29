@@ -28,6 +28,39 @@ Initial release of the LeviLamina port.
 - Smoke-test target restricted to POSIX platforms (removed the meaningless
   `ws2_32` Windows branch).
 
+### Fixed (LeviLamina 26.20 header/API alignment, second CI pass)
+- **`mc/*` header relocations** (LeviLamina 26.20 restructured the Bedrock
+  header tree): `mc/nbt/CompoundTag.h` → `mc/deps/nbt/CompoundTag.h`,
+  `mc/player/Player.h` → `mc/world/actor/player/Player.h`,
+  `mc/gui/ScreenView.h` → `mc/client/gui/screens/ScreenView.h`,
+  `mc/gui/MinecraftUIRenderContext.h` → `mc/client/renderer/screen/`
+  `MinecraftUIRenderContext.h`.
+- **Event renames**: `PlayerLeftEvent` → `PlayerDisconnectEvent`;
+  `After/BeforeUIRenderEvent` now ship in `ll/api/event/render/UIRenderEvent.h`
+  with renamed accessors (`uiRenderContext()` / `screenView()`).
+- **Input events**: `KeyInputEvent` exposes `keyCode()`/`isDown()` and no
+  modifier state — the upstream ALT+Q hard-capture combo is now
+  **G-while-captured** (G toggles none → soft → hard, ESC backs out);
+  `MouseInputEvent` uses `actionButtonId()` + `buttonData()`.
+- **Scheduler API**: `ll/api/scheduler/Scheduler.h` is gone in 26.20; the
+  server cadence now runs on `ll::coro::keepThis` +
+  `ll::thread::ServerThreadExecutor` (which the code already targeted).
+- **`ItemStack` userdata** rides the constructor
+  (`{name, count, aux, CompoundTag*}`); the old `setUserdata` setter is gone.
+- **`MemoryOperators.cpp`** defined `LL_MEMORY_OPERATORS` without including
+  `ll/api/memory/MemoryOperators.h`, so the allocator overrides were never
+  compiled (heap-mismatch risk on Windows). Fixed.
+- **Client-only TUs guarded**: `ClientHooks.cpp` / `HudRenderer.cpp` compile
+  to empty translation units on server targets (their event headers ship in
+  `src-client` only).
+- **CI matrix matches upstream reality**: LeviLamina 26.20 builds on Windows
+  only (its own CI is windows-latest; the `symbolprovider` dependency is
+  Windows-only). The ubuntu lane became a standalone **Wayland protocol
+  smoke test** job — pure POSIX C++, no packages — keeping the compositor
+  core exercised on every push.
+- **xmake**: adopted the official mod-template Windows configuration
+  (`clang-cl` toolchain, `/EHa`, `NOMINMAX`/`UNICODE`, `MD` runtime).
+
 ### Added
 - **Custom Wayland compositor core** (`src/compositor/`): wire protocol
   marshaling, object lifecycle, SCM_RIGHTS fd passing; serves

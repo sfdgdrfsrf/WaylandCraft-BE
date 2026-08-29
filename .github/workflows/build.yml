@@ -16,16 +16,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Server + client targets, Windows + Linux.
-        # (LeviLamina official support matrix; see docs/PORT_NOTES.md for
-        # why the Android arm64 client is a separate experimental workflow.)
-        os: [windows-latest, ubuntu-latest]
+        # LeviLamina 26.20 officially builds on Windows only — its own CI is
+        # windows-latest and its symbolprovider dependency is Windows-only
+        # (PE delay-load hooks). The Linux *compositor core* is still fully
+        # exercised by the smoke-test job below, which needs no packages.
+        # See docs/PORT_NOTES.md ("Windows build layer").
+        os: [windows-latest]
         target_type: [server, client]
-        exclude:
-          # Linux client binaries require LeviLauncher-Android packaging;
-          # kept out of required CI until LeviLaunchroid CI integration.
-          - os: ubuntu-latest
-            target_type: client
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} / ${{ matrix.target_type }}
 
@@ -37,8 +34,7 @@ jobs:
           xmake-version: latest
           actions-cache-folder: .xmake-cache
           package-cache: true
-          package-cache-key: wlc-${{ matrix.os }}-${{ matrix.target_type }}-v1
-          projectpath: ${{ github.workspace }}
+          package-cache-key: wlc-${{ matrix.os }}-${{ matrix.target_type }}-v2
 
       - name: Configure
         run: |
@@ -47,19 +43,27 @@ jobs:
       - name: Build
         run: xmake -y
 
-      # The Wayland smoke test proves the custom compositor speaks the real
-      # wire protocol (registry/bind/shm/xdg-shell/frame callbacks).
-      - name: Wayland protocol smoke test (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          g++ -std=c++20 -Isrc -o /tmp/smoke tests/smoke_client.cpp \
-              src/compositor/*.cpp src/util/Log.cpp src/util/MemFd.cpp \
-              src/util/XkbKeymap.cpp -lpthread
-          timeout 60 /tmp/smoke
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: WaylandCraftBE-${{ matrix.os }}-${{ matrix.target_type }}
           path: bin/*
           if-no-files-found: error
+
+  # The Wayland smoke test proves the custom compositor speaks the real wire
+  # protocol (registry/bind/shm/xdg-shell/frame callbacks). Pure POSIX C++ —
+  # no LeviLamina headers, no packages, runs anywhere.
+  smoke-test:
+    runs-on: ubuntu-latest
+    name: Wayland protocol smoke test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile
+        run: |
+          g++ -std=c++20 -Isrc -o /tmp/smoke tests/smoke_client.cpp \
+              src/compositor/*.cpp src/util/Log.cpp src/util/MemFd.cpp \
+              src/util/XkbKeymap.cpp -lpthread
+
+      - name: Run
+        run: timeout 60 /tmp/smoke

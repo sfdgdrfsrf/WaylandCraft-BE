@@ -11,9 +11,9 @@
 #include "net/Sync.h"
 #include "util/Log.h"
 
-#include "mc/nbt/CompoundTag.h"
+#include "mc/deps/nbt/CompoundTag.h"       // NBT moved under deps/ in 26.20
 #include "mc/world/item/ItemStack.h"
-#include "mc/player/Player.h"
+#include "mc/world/actor/player/Player.h"  // was mc/player/ in 1.21-era headers
 
 #include <algorithm>
 #include <cstdio>
@@ -48,11 +48,11 @@ bool WindowItem::give(Player& player, const WindowHandle& handle, bool missingOn
         return false;
     }
 
-    ItemStack item(kItemId, 1);
     CompoundTag nbt;
     nbt.putString("owner", handle.ownerUuid);
     nbt.putInt64("handle", static_cast<int64_t>(handle.handle));
-    item.setUserdata(std::move(nbt));
+    // 26.20 ItemStack: userdata rides the ctor (no setUserdata setter).
+    ItemStack item{kItemId, 1, 0, &nbt};
     player.add(item);
     Log::info(strf("gave window item %s to %s", handle.tooltipId().c_str(), key.c_str()));
     return true;

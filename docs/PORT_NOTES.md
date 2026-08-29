@@ -68,6 +68,44 @@ Frame pump choreography (identical to upstream):
   `wl_data_offer.receive` fd splice — Minecraft never touches the bytes
   (exactly upstream's design).
 
+## LeviLamina 26.20 API map (things that moved)
+
+The port was written against the 1.21-era LeviLamina header layout and then
+aligned to 26.20. The deltas a future re-base needs to know:
+
+| 1.21-era | 26.20 | Notes |
+| --- | --- | --- |
+| `mc/nbt/CompoundTag.h` | `mc/deps/nbt/CompoundTag.h` | NBT under `deps/` |
+| `mc/player/Player.h` | `mc/world/actor/player/Player.h` | |
+| `mc/gui/ScreenView.h` | `mc/client/gui/screens/ScreenView.h` | client tree |
+| `mc/gui/MinecraftUIRenderContext.h` | `mc/client/renderer/screen/MinecraftUIRenderContext.h` | client tree |
+| `ll/api/event/player/PlayerLeftEvent.h` | `PlayerDisconnectEvent.h` | |
+| `ll/api/event/render/AfterUIRenderEvent.h` | `UIRenderEvent.h` | both After/Before; accessors `uiRenderContext()` / `screenView()` |
+| `KeyInputEvent.key()/action()/modifiers()` | `keyCode()` / `isDown()` | **no modifier state** — ALT+Q became G-escalation |
+| `MouseInputEvent.button()/action()` | `actionButtonId()` / `buttonData()` | |
+| `ll/api/scheduler/Scheduler.h` | `ll/api/coro/CoroTask.h` + `ll/api/thread/ServerThreadExecutor.h` | |
+| `ItemStack::setUserdata` | `ItemStack{name, count, aux, CompoundTag*}` ctor | |
+
+Client-only headers ship under `src-client/` and are therefore unavailable to
+server-target builds — `ClientHooks.cpp` / `HudRenderer.cpp` are guarded with
+`#if defined(WLC_CLIENT) && !defined(WLC_SERVER)`.
+
+## Platform reality check
+
+- **LeviLamina 26.20 builds on Windows only.** Its own CI is windows-latest
+  and its `symbolprovider` dependency (PE delay-load symbol resolution) is
+  Windows-only, so no mod depending on the levilamina package can currently
+  install on Linux. Our CI matrix reflects that: Windows server + client
+  lanes, plus a package-free **Wayland protocol smoke test** on Linux that
+  keeps the POSIX compositor core honest on every push. When upstream
+  restores Linux mod builds, re-add the ubuntu lane to the matrix.
+- **Windows mod builds** work but match upstream's feature model: the
+  compositor is POSIX-only (stubs, below), so config/commands/HUD/items/
+  sync load while app windows report unavailable.
+- **Android** remains the port's flagship target (LeviLaunchroid + the NDK
+  lane in `build-android.yml`, experimental until LeviMC publishes an
+  official cross target).
+
 ## Windows build layer (upstream parity)
 
 Windows lanes (server + client) compile the whole glue layer but swap the

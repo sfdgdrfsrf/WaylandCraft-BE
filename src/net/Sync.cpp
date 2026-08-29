@@ -12,9 +12,9 @@
 
 #include "ll/api/event/EventBus.h"
 #include "ll/api/event/player/PlayerJoinEvent.h"
-#include "ll/api/event/player/PlayerLeftEvent.h"
+#include "ll/api/event/player/PlayerDisconnectEvent.h"  // was PlayerLeftEvent (1.21-era)
 
-#include "mc/player/Player.h"
+#include "mc/world/actor/player/Player.h"  // was mc/player/
 #include "mc/server/ServerPlayer.h"
 
 #include <algorithm>
@@ -92,8 +92,8 @@ bool ServerSync::install() {
             player.sendMessage("§b[WaylandCraft-BE]§r compositor online — use /wlc for help.");
         }));
 
-    gListeners.push_back(bus.emplaceListener<ll::event::PlayerLeftEvent>(
-        [](ll::event::PlayerLeftEvent& ev) {
+    gListeners.push_back(bus.emplaceListener<ll::event::PlayerDisconnectEvent>(
+        [](ll::event::PlayerDisconnectEvent& ev) {
             std::lock_guard<std::mutex> lock(gSyncMutex);
             gPlayers.erase(ev.self().getOrCreateUniqueID());
         }));

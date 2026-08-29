@@ -4,7 +4,7 @@
 //  Client render glue. Drawing goes through MinecraftUIRenderContext
 //  (ScreenView& from ll::event::render::AfterUIRenderEvent) — the only
 //  officially exposed client render hook in LeviLamina's client headers
-//  (src-client/ll/api/event/render/).
+//  (src-client/ll/api/event/render/UIRenderEvent.h in 26.20).
 //
 //  NOTE FOR PORTERS: MUIRC texture draws use resource-pack-relative texture
 //  paths (drawImage / flushImages). Dynamic app frames use TextureBridge's
@@ -12,8 +12,13 @@
 //  backed by runtime-uploaded pixels (RenderDragon texture via
 //  BedrockTexture::uploadFromRGBA-equivalent hook, isolated in TextureBridge
 //  so per-version symbol drift only touches one file).
+//
+//  CLIENT-ONLY TU: the whole body is guarded out on server targets — the
+//  render/UI event headers and mc/client/* types ship with src-client only.
 // ============================================================================
 #include "render/HudRenderer.h"
+
+#if defined(WLC_CLIENT) && !defined(WLC_SERVER)
 
 #include "Mod.h"
 #include "config/Config.h"
@@ -22,11 +27,12 @@
 #include "util/Log.h"
 
 #include "ll/api/event/EventBus.h"
-#include "ll/api/event/render/AfterUIRenderEvent.h"
-#include "ll/api/event/render/BeforeUIRenderEvent.h"
+// 26.20: Before/AfterUIRenderEvent both live in UIRenderEvent.h.
+#include "ll/api/event/render/UIRenderEvent.h"
 
-#include "mc/gui/ScreenView.h"                 // client headers via LeviLamina
-#include "mc/gui/MinecraftUIRenderContext.h"  // (validated by client CI lane)
+// 26.20 layout: gui/* split into mc/client/gui + mc/client/renderer/screen.
+#include "mc/client/gui/screens/ScreenView.h"
+#include "mc/client/renderer/screen/MinecraftUIRenderContext.h"
 
 #include <chrono>
 #include <ctime>
@@ -49,7 +55,11 @@ void drawHud(MinecraftUIRenderContext& ctx, ScreenView&) {
         auto now = std::chrono::system_clock::now();
         std::time_t t = std::chrono::system_clock::to_time_t(now);
         std::tm lt{};
+#ifdef _WIN32
+        localtime_s(&lt, &t);
+#else
         localtime_r(&t, &lt);
+#endif
         char buf[32];
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M", &lt);
         // ctx.drawText at top-right (metrics from ScreenView camera)
@@ -89,7 +99,7 @@ bool HudRenderer::install() {
             // The frame pump ALSO rides this event: upstream called
             // bridge.update() from MinecraftMixin.runTick "Post render".
             Mod::registry().update(Config::get().pixelsPerBlock);
-            drawHud(ev.ctx(), ev.view());
+            drawHud(ev.uiRenderContext(), ev.screenView());
         }));
     Log::info("HUD renderer installed (client render event)");
     return true;
@@ -108,3 +118,5 @@ void HudRenderer::onFrameUpdated(uint64_t surfaceId, int w, int h, const void* r
 }
 
 } // namespace wlc
+
+#endif // WLC_CLIENT && !WLC_SERVER

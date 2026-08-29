@@ -23,7 +23,7 @@ Config& Config::get() {
 
 bool Config::load() {
     std::lock_guard<std::mutex> lock(cfgMutex);
-    auto path = ll::mod::NativeMod::current().getDataDir() / "config.json";
+    auto path = ll::mod::NativeMod::current()->getDataDir() / "config.json";
 
     // ll::config::loadConfig performs reflection-based field mapping and
     // fills missing fields with the current defaults of Config::get().
@@ -34,7 +34,7 @@ bool Config::load() {
 
 bool Config::save() {
     std::lock_guard<std::mutex> lock(cfgMutex);
-    auto path = ll::mod::NativeMod::current().getDataDir() / "config.json";
+    auto path = ll::mod::NativeMod::current()->getDataDir() / "config.json";
     return ll::config::saveConfig(get(), path);
 }
 

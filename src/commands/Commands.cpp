@@ -27,6 +27,13 @@
 
 namespace wlc {
 
+// /wlc launch <appId> params. Deliberately at namespace scope with EXTERNAL
+// linkage: boost::pfr (LL command reflection) rejects function-local and
+// internal-linkage types under clang-cl (fake_object<T> diagnostic).
+struct LaunchParams {
+    std::string appId;
+};
+
 namespace {
 bool gRegistered = false;
 } // namespace
@@ -63,9 +70,6 @@ bool Commands::registerAll() {
     });
 
     // /wlc launch <appId>
-    struct LaunchParams {
-        std::string appId;
-    };
     cmd.overload<LaunchParams>()
         .text("launch")
         .required("appId")

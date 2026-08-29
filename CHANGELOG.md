@@ -61,6 +61,27 @@ Initial release of the LeviLamina port.
 - **xmake**: adopted the official mod-template Windows configuration
   (`clang-cl` toolchain, `/EHa`, `NOMINMAX`/`UNICODE`, `MD` runtime).
 
+### Fixed (third CI pass — link stage)
+- **`Mod` ctor/dtor moved out-of-line**: the inline constructor implicitly
+  instantiated `std::unique_ptr<State>`'s deleter while `State` was still
+  forward-declared (MSVC `static_assert(sizeof(State))`).
+- **`NativeMod::current()` is `shared_ptr` in 26.20** — dereferenced in
+  `Mod::instance()` and switched to `->getDataDir()` in `Config.cpp`.
+- **Self-contained `<cstdint>`** in all 10 headers using fixed-width ints
+  (MSVC compiles some TUs standalone, unlike glibc-header-leaky builds).
+- **Command system 26.20 API**: `CommandRegistrar::getInstance(bool)` became
+  per-side `getServerInstance()` / `getClientInstance()`;
+  `getOrCreateCommand` returns `CommandHandle&`; command parameter structs
+  need **external linkage** (namespace scope, not function-local) for
+  boost::pfr reflection under clang-cl; `WindowRegistry`/`PlatformBridge`
+  includes added where previously leak-dependent.
+- **Window item NBT built via `CompoundTag::fromSnbt`** (LL-exported):
+  writing through `CompoundTagVariant::operator=` instantiates the recursive
+  `std::_Variant_storage_` destructor chain, whose symbols the prelink
+  import set does not carry (BDS ships an older STL shape). SNBT parsing
+  keeps every variant internal inside LeviLamina.dll — the mod's objects
+  carry zero STL-variant surface.
+
 ### Added
 - **Custom Wayland compositor core** (`src/compositor/`): wire protocol
   marshaling, object lifecycle, SCM_RIGHTS fd passing; serves

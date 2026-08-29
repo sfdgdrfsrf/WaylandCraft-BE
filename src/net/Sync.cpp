@@ -95,7 +95,7 @@ bool ServerSync::install() {
     gListeners.push_back(bus.emplaceListener<ll::event::PlayerDisconnectEvent>(
         [](ll::event::PlayerDisconnectEvent& ev) {
             std::lock_guard<std::mutex> lock(gSyncMutex);
-            gPlayers.erase(ev.self().getOrCreateUniqueID());
+            gPlayers.erase(ev.self().getOrCreateUniqueID().rawID);
         }));
 
     // Cooldown tick-down mirrors upstream ServerItemManager.onStartLevelTick.

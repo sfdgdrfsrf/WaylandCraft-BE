@@ -23,7 +23,9 @@ namespace wlc {
 
 namespace {
 /// Stable per-player key for cooldown/alive bookkeeping.
-std::string idOf(Player& p) { return p.getOrCreateUniqueID().asString(); }
+/// 26.20 note: ActorUniqueID no longer carries asString(); rawID is the
+/// unique id int64 and is stable per player.
+std::string idOf(Player& p) { return std::to_string(p.getOrCreateUniqueID().rawID); }
 } // namespace
 
 std::string WindowHandle::tooltipId() const {
@@ -48,9 +50,10 @@ bool WindowItem::give(Player& player, const WindowHandle& handle, bool missingOn
         return false;
     }
 
+    // 26.20 CompoundTag: no put* setters — assign through the variant API.
     CompoundTag nbt;
-    nbt.putString("owner", handle.ownerUuid);
-    nbt.putInt64("handle", static_cast<int64_t>(handle.handle));
+    nbt["owner"]  = handle.ownerUuid;
+    nbt["handle"] = static_cast<int64_t>(handle.handle);
     // 26.20 ItemStack: userdata rides the ctor (no setUserdata setter).
     ItemStack item{kItemId, 1, 0, &nbt};
     player.add(item);

@@ -13,6 +13,11 @@
 #include <cstdint>
 #include <string>
 
+// IMPORTANT: declare ::Player at GLOBAL scope. Writing `class Player&` inside
+// namespace wlc would declare an unrelated wlc::Player and shadow Bedrock's
+// ::Player at every use site (this exact bug broke CI).
+class Player;
+
 namespace wlc {
 
 struct WindowHandle {
@@ -31,10 +36,10 @@ public:
 
     /// Gives the player a window item bound to (playerUuid, handle).
     /// Returns false on cooldown (upstream itemGiveCooldown).
-    static bool give(class Player& player, const WindowHandle& handle, bool missingOnly);
+    static bool give(Player& player, const WindowHandle& handle, bool missingOnly);
 
     /// Validates + GCs one player's inventory (upstream per-tick validation).
-    static void validateInventory(class Player& player);
+    static void validateInventory(Player& player);
 
     /// Cooldown tick-down (called from the server loop hook).
     static void tickCooldowns();

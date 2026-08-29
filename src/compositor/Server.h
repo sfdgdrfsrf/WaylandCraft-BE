@@ -9,6 +9,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 #include "compositor/Client.h"
 #include "compositor/Types.h"
 

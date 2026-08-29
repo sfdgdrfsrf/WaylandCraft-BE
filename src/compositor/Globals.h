@@ -3,6 +3,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 #include "compositor/WireProtocol.h"
 
 namespace wlc {

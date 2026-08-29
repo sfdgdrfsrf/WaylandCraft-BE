@@ -10,6 +10,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 namespace wlc {
 
 class HudRenderer {

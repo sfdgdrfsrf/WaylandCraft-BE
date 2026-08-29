@@ -7,6 +7,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 #include "compositor/Types.h"
 
 #include <string>

@@ -5,6 +5,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 #include "compositor/WireProtocol.h"
 
 #include <deque>

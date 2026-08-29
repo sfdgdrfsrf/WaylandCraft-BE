@@ -12,6 +12,8 @@
 // ============================================================================
 #pragma once
 
+#include <cstdint>
+
 #include "compositor/Server.h"
 #include "compositor/XdgShell.h"
 #include "world/WindowDisplay.h"

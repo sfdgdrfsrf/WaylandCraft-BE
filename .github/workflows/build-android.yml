@@ -1,10 +1,12 @@
 name: Android (experimental)
 
-# LeviLaunchroid (Android 9+ ARM64) loads native .so client mods. LeviLamina
-# has no OFFICIAL Android target yet, so this lane is best-effort: it
-# cross-compiles the mod with the NDK toolchain for arm64-v8a and publishes
-# the .so for sideloading into LeviLaunchroid's mods/ directory.
-# See docs/ANDROID_PORT.md for the full story.
+# LeviLaunchroid (Android 9+ ARM64) loads native .so mods via its
+# preloader-android runtime (PLGetModRegistration / pl::mod SDK). LeviLamina
+# itself has NO Android target (client = windows|x64 only), so this lane does
+# NOT use xmake/levilamina at all: it cross-compiles the pure-POSIX core
+# (Wayland compositor + Android bridge + WLCF capture service) with the NDK
+# through android-mod/CMakeLists.txt. See android-mod/src/AndroidMod.cpp and
+# docs/ANDROID_PORT.md.
 
 on:
   workflow_dispatch:
@@ -26,36 +28,23 @@ jobs:
           ndk-version: r26d
           add-to-path: true
 
-      - uses: xmake-io/github-action-setup-xmake@v1
-        with:
-          xmake-version: latest
+      # cmake + ninja are preinstalled on ubuntu-latest runners.
 
-      - name: Configure (android arm64 client)
-        run: |
-          xmake f -y -a arm64-v8a -p android --ndk=$ANDROID_NDK_HOME \
-            -m release --target_type=client --android=y
-
-      - name: Build
-        run: xmake -y
+      - name: Build + package
+        run: ./android-mod/package.sh android-mod/dist/WaylandCraftBE-android-arm64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: WaylandCraftBE-android-arm64-client
-          path: bin/*
-          if-no-files-found: warn
+          path: android-mod/dist/WaylandCraftBE-android-arm64.zip
+          if-no-files-found: error
 
       # Tag builds: attach the .so (packed) to the GitHub Release itself so
       # LeviLaunchroid users can grab it without digging through Actions
       # artifacts. Dispatch/manual runs keep the artifact-only upload above.
-      - name: Pack release zip
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          cd bin
-          zip -r ../WaylandCraftBE-android-arm64.zip .
-
       - name: Attach to release (tag builds)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: WaylandCraftBE-android-arm64.zip
+          files: android-mod/dist/WaylandCraftBE-android-arm64.zip

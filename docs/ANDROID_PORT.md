@@ -44,6 +44,15 @@ compositor socket, which other apps *cannot path-access* directly:
 
 ## Setup on Android (LeviLaunchroid)
 
+> **Build status (phase 1):** LeviLamina has no Android target, so the
+> Android `.so` is a **preloader-android (`pl::mod`) native mod**, not an LL
+> client mod. It ships the pure-POSIX core: the real Wayland compositor
+> (Unix socket + TCP loopback bridge + WLCF capture service). It does NOT
+> yet render windows in-game — the RenderDragon hooks, HUD and `/wlc`
+> commands remain Windows/Linux-lane features (see `docs/PORT_NOTES.md`).
+> Build it with `android-mod/package.sh` (NDK + CMake) or grab
+> `WaylandCraftBE-android-arm64.zip` from a tagged release / Actions run.
+
 1. Install [LeviLaunchroid](https://github.com/LiteLDev/LeviLaunchroid) (Android 9+).
 2. Import the `WaylandCraftBE-android-arm64` client build into its mod manager.
 3. Optional — Termux apps:

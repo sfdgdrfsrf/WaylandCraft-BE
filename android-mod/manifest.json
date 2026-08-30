@@ -1,0 +1,10 @@
+{
+  "name": "WaylandCraft-BE",
+  "type": "preload-native",
+  "entry": "libwaylandcraft.so",
+  "version": "1.0.0",
+  "author": "WaylandCraft-BE contributors (GPL-3.0; upstream Java mod WaylandCraft v2.0.3 by EVV1E)",
+  "description": "A Wayland compositor inside Minecraft. Phase 1 (this build): the compositor itself runs in the game process - Wayland socket + TCP loopback bridge (127.0.0.1:7231) for Termux apps (foot, weston-terminal) and the WLCF capture service (127.0.0.1:7232) for the companion app. Connect from Termux: pkg install python; python wayland-tcp-bridge.py & then WAYLAND_DISPLAY=wayland-0 foot. In-game window rendering (RenderDragon hooks) and /wlc commands are phase 2 - see docs/PORT_NOTES.md.",
+  "minecraft_versions": [],
+  "license": "GPL-3.0"
+}

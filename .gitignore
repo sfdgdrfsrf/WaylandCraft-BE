@@ -17,6 +17,9 @@ out/
 .xmake/
 *.xmake
 
+# android-mod packaging output (the zip goes to a release / download dir)
+dist/
+
 # OS junk
 .DS_Store
 Thumbs.db

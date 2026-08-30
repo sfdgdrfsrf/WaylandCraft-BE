@@ -77,7 +77,9 @@ int makeMemFd(size_t size) {
     }
 #endif
 
-    // 4) POSIX shm.
+    // 4) POSIX shm. Not available in bionic (no /dev/shm on Android); the
+    //    memfd/ashmem/tmpfile backends above cover every Android device.
+#if !defined(__ANDROID__)
     std::string name = strf("/wlc-shm-%d-%d", static_cast<int>(getpid()), rand());
     int fd = shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, 0600);
     if (fd >= 0) {
@@ -85,6 +87,7 @@ int makeMemFd(size_t size) {
         if (ftruncate(fd, static_cast<off_t>(size)) == 0) return fd;
         ::close(fd);
     }
+#endif
 
     Log::error("makeMemFd: all backends failed");
     return -1;

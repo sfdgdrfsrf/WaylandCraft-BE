@@ -16,7 +16,7 @@ on:
 jobs:
   android-arm64:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # Lane is proven (local + CI builds): fail loudly instead of masking.
     permissions:
       contents: write
     steps:

@@ -29,8 +29,6 @@ void WindowDisplay::anchorToCamera(const Vec3& camPos, const Vec3& camLook,
 
 void WindowDisplay::anchorToParent(const WindowDisplay& parent, int32_t popupX,
                                    int32_t popupY) {
-    // Popup positioned relative to parent's origin + xdg offset (upstream
-    // anchorToParent: parent origin + offset * parent scale + epsilon).
     plane.pixelScale = parent.plane.pixelScale;
     plane.normal = parent.plane.normal;
     plane.down = parent.plane.down;
@@ -42,10 +40,6 @@ void WindowDisplay::anchorToParent(const WindowDisplay& parent, int32_t popupX,
 
 bool WindowDisplay::tryAttachWalls(const Vec3& camPos, const Vec3& camDir,
                                    double range) {
-    // Upstream: block raycast up to 32 blocks; orient the display parallel to
-    // the hit face with a 0.03 offset. The game glue supplies hit data; the
-    // math here matches: axis-aligned normal, offset along it.
-    // (Bedrock block raycast results are injected by the client hook.)
     (void)camPos;
     (void)camDir;
     (void)range;
@@ -53,7 +47,6 @@ bool WindowDisplay::tryAttachWalls(const Vec3& camPos, const Vec3& camDir,
 }
 
 bool WindowDisplay::trySnapToOtherWindows(std::vector<WindowDisplay*>& others) {
-    // Upstream snapToOtherWindows: 300px outer / 100px corner thresholds.
     constexpr double kOuterPx = 300.0;
     for (WindowDisplay* o : others) {
         if (o == this || !o->visible) continue;
@@ -78,7 +71,6 @@ std::optional<SurfaceHit> WindowDisplay::intersect(Compositor& comp, const Vec3&
     if (!base) return std::nullopt;
     if (base->dist < 0) return std::nullopt;
 
-    // Bounds check against the window geometry.
     double lx = base->localX + geometryX;
     double ly = base->localY + geometryY;
     if (lx < 0 || ly < 0 || lx > windowW || ly > windowH) return std::nullopt;
@@ -86,7 +78,6 @@ std::optional<SurfaceHit> WindowDisplay::intersect(Compositor& comp, const Vec3&
     Connection* c = root.conn;
     if (!c) return std::nullopt;
 
-    // Input-region check on the root surface (upstream inputRegionContains).
     if (auto* st = findSurfaceState(*c, root.id)) {
         Rect r = st->inputRegion;
         if (lx - geometryX < r.x || ly - geometryY < r.y ||
@@ -95,7 +86,7 @@ std::optional<SurfaceHit> WindowDisplay::intersect(Compositor& comp, const Vec3&
         }
     }
 
-    // Walk the subsurface tree back-to-front (children drawn after parent).
+    // Walk the subsurface tree back-to-front (parentId + subX/subY).
     SurfaceRef deepest = root;
     double deepX = lx;
     double deepY = ly;
@@ -159,9 +150,49 @@ void WindowDisplay::syncGeometry(Compositor& comp, double pixelsPerBlock) {
     plane.pixelScale = 1.0 / pixelsPerBlock;
 
     if (auto* ts = XdgShellModule::toplevelForSurface(*c, root.id)) {
-        // remainder of original file continues unchanged from here...
-        // (kept identical to prior content for the rest of the method)
+        title = ts->title;
+        appId = ts->appId;
     }
+    if (auto* st = findSurfaceState(*c, root.id)) {
+        if (BufferView v = resolveBuffer(*c, st->committedBuffer); v.valid()) {
+            windowW = v.width;
+            windowH = v.height;
+        }
+    }
+    (void)comp;
+}
+
+// ---------------------------------------------------------------------------
+// Grabs
+// ---------------------------------------------------------------------------
+void MoveGrab::onMove(WindowDisplay& d, const Vec3& camPos, const Vec3& camLook) {
+    d.anchorToCamera(camPos, camLook, Vec3{0, 1, 0});
+}
+
+void ResizeGrab::onMove(WindowDisplay& d, const Vec3& camPos, const Vec3& camLook) {
+    (void)d;
+    (void)camPos;
+    (void)camLook;
+}
+
+void PointerGrabMap::startImplicit(const SurfaceRef& surf, uint32_t button,
+                                   uint32_t serial, const Vec3& worldPos, double sx,
+                                   double sy) {
+    implicit.surface = surf;
+    implicit.button = button;
+    implicit.serial = serial;
+    implicit.startWorldPos = worldPos;
+    implicit.startSurfaceX = sx;
+    implicit.startSurfaceY = sy;
+    implicit.active = true;
+}
+
+void PointerGrabMap::endImplicit() {
+    implicit = Implicit{};
+}
+
+bool PointerGrabMap::matchSerial(uint32_t serial, PointerGrabMap& map) {
+    return map.implicit.active && serial == map.implicit.serial;
 }
 
 } // namespace wlc

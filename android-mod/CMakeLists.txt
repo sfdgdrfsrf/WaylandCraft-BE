@@ -59,7 +59,7 @@ target_include_directories(waylandcraft PRIVATE
 target_compile_definitions(waylandcraft PRIVATE
     WLC_ANDROID=1
     WLC_CLIENT=1
-    WLC_VERSION="1.0.0-android"
+    WLC_VERSION="1.0.1-android"
     # pl/Logger.hpp calls non-template fmt::vformat; header-only keeps the
     # .so free of any fmt link dependency.
     FMT_HEADER_ONLY=1
@@ -70,9 +70,8 @@ target_compile_definitions(waylandcraft PRIVATE
 find_library(log-lib log)
 target_link_libraries(waylandcraft PRIVATE ${log-lib})
 
-# Keep the exported surface tight: only PLGetModRegistration (+ JNI bits the
-# runtime needs) should leave the module.
-target_link_options(waylandcraft PRIVATE
-    -Wl,--exclude-libs,ALL
-    -Wl,-z,max-page-size=16384
+# Export only the preloader entry point
+set_target_properties(waylandcraft PROPERTIES
+    OUTPUT_NAME "waylandcraft"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )

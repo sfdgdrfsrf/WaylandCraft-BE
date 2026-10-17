@@ -70,8 +70,9 @@ target_compile_definitions(waylandcraft PRIVATE
 find_library(log-lib log)
 target_link_libraries(waylandcraft PRIVATE ${log-lib})
 
-# Export only the preloader entry point
-set_target_properties(waylandcraft PROPERTIES
-    OUTPUT_NAME "waylandcraft"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+# Keep the exported surface tight: only PLGetModRegistration (+ JNI bits the
+# runtime needs) should leave the module.
+target_link_options(waylandcraft PRIVATE
+    -Wl,--exclude-libs,ALL
+    -Wl,-z,max-page-size=16384
 )

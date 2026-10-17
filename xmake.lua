@@ -1,9 +1,9 @@
--- ============================================================================
+-- =============================================================================
 --  WaylandCraft-BE — Wayland compositor in Minecraft Bedrock (LeviLamina port)
 --  Original Java mod: WaylandCraft v2.0.3 by EVV1E (GPL-3.0)
 --  This port targets LeviLamina 26.20.x (server) and LeviLauncher/LeviLaunchroid
 --  client builds, with an experimental Android arm64 cross build.
--- ============================================================================
+-- =============================================================================
 
 add_rules("mode.release", "mode.debug")
 
@@ -48,7 +48,7 @@ target("WaylandCraftBE")
     set_languages("c++20")
     set_basename("WaylandCraftBE")
     set_values("mod.name", "WaylandCraftBE")
-    set_values("mod.version", "1.0.0")
+    set_values("mod.version", "1.0.1")
 
     add_includedirs("src")
     add_headerfiles("src/**.h")
@@ -90,7 +90,7 @@ target("WaylandCraftBE")
     else
         add_defines("LL_PLAT_S=1", "WLC_SERVER=1")
     end
-    add_defines('WLC_VERSION="1.0.0"')
+    add_defines('WLC_VERSION="1.0.1"')
 
 
 -- ---------------------------------------------------------------------------
